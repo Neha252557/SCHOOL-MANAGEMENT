@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>School Management System</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/web3/dist/web3.min.js"></script>
+    <style>
+        
+    body {
+        font-family: 'Georgia', serif; /* A classic font that pairs well with vintage styles */
+        margin: 0;
+        padding: 20px;
+        background-image: url('https://th.bing.com/th/id/R.c81ec32df4384b017214fc4184aaa39a?rik=N3mAPeclNEK2kQ&riu=http%3a%2f%2fwallpapercave.com%2fwp%2fCdHg5pJ.jpg&ehk=Hz4Z3HN%2bcfrtiCQ1GYlE3L7ZzWJmusAku68ioHzgfnU%3d&risl=&pid=ImgRaw&r=0');
+        background-size: cover;
+        background-position: center;
+        color: #333;
+    }
+
+    h2 {
+        color: #4a90e2; /* You can adjust this color based on the image for better contrast */
+        margin-bottom: 15px;
+    }
+
+    #loginOptions, .form-section {
+        background-color: rgba(255, 255, 255, 0.8); /* Add transparency for better blending with the background */
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+    }
+
+    /* Other styles remain the same */
+
+
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        h2 {
+            color: #4a90e2;
+            margin-bottom: 15px;
+        }
+        #loginOptions, .form-section {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        input, button, select {
+            margin: 10px 0;
+            padding: 10px;
+            width: 100%;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #4a90e2;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #357ab8;
+        }
+        .hidden { display: none; }
+        #resultsChart {
+            max-width: 600px;
+            margin: auto;
+            display: block;
+        }
+        .rating-question {
+            margin-top: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .error {
+            color: red;
+            font-size: 0.9em;
+        }
+        @media (max-width: 600px) {
+            input, button, select {
+                width: calc(100% - 20px);
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div id="loginOptions">
+    <h2>Welcome to the School Management System</h2>
+    <button id="loginPrincipalBtn">Login as Principal</button>
+    <button id="loginStudentBtn">Login as Student</button>
+    <button id="loginInstitutionBtn">Login as Institution</button>
+</div>
+
+<div id="principalForm" class="form-section hidden">
+    <h2>Create School</h2>
+    <input type="text" id="schoolName" placeholder="School Name" required>
+    <input type="email" id="schoolEmail" placeholder="School Email" required>
+    <input type="text" id="schoolCode" placeholder="School Code" required>
+    <button id="createSchoolBtn">Create School</button>
+    <div class="error" id="schoolError"></div>
+</div>
+
+<div id="studentForm" class="form-section hidden">
+    <h2>Student Login</h2>
+    <input type="text" id="studentSchoolCode" placeholder="School Code" required>
+    <input type="text" id="studentRollNumber" placeholder="Roll Number" required>
+    <input type="password" id="studentPassword" placeholder="Password" required>
+    <button id="loginStudentSubmit">Submit</button>
+    <div class="error" id="studentError"></div>
+</div>
+
+<div id="institutionForm" class="form-section hidden">
+    <h2>Institution Login</h2>
+    <input type="text" id="institutionCode" placeholder="Institution Code" required>
+    <button id="loginInstitutionSubmit">Submit</button>
+    <div class="error" id="institutionError"></div>
+</div>
+
+<div id="addTeachers" class="form-section hidden">
+    <h2>Add Teachers</h2>
+    <input type="number" id="numTeachers" placeholder="Number of Teachers" required>
+    <button id="addTeachersBtn">Add Teachers</button>
+    <div id="teachersInput" class="hidden"></div>
+</div>
+
+<div id="addStudents" class="form-section hidden">
+    <h2>Add Students</h2>
+    <input type="number" id="numStudents" placeholder="Number of Students" required>
+    <button id="addStudentsBtn">Add Students</button>
+    <div id="studentsInput" class="hidden"></div>
+</div>
+
+<div id="teacherSelection" class="form-section hidden">
+    <h2>Rate Teacher</h2>
+    <select id="teacherList"></select>
+    <button id="rateTeacherBtn">Rate Teacher</button>
+    <div id="ratingQuestions" class="hidden"></div>
+    <button id="submitRatingBtn" class="hidden">Submit Rating</button>
+</div>
+
+<div id="results" class="form-section hidden">
+    <h2>Rating Results</h2>
+    <canvas id="resultsChart"></canvas>
+    <button id="backToHomeFromResults">Back to Home</button>
+</div>
+
+<div id="feedbackSection" class="form-section hidden">
+    <h2>Feedback</h2>
+    <div id="feedbackList"></div>
+    <button id="backToHome">Back to Home</button>
+</div>
+
+<script>
+let schoolData = {
+    name: "",
+    email: "",
+    code: "",
+    teachers: [],
+    students: {},
+    feedback: []
+};
+
+document.getElementById('loginStudentBtn').onclick = function() {
+    document.getElementById('loginOptions').classList.add('hidden');
+    document.getElementById('studentForm').classList.remove('hidden');
+};
+
+document.getElementById('loginPrincipalBtn').onclick = function() {
+    document.getElementById('loginOptions').classList.add('hidden');
+    document.getElementById('principalForm').classList.remove('hidden');
+};
+
+document.getElementById('loginInstitutionBtn').onclick = function() {
+    document.getElementById('loginOptions').classList.add('hidden');
+    document.getElementById('institutionForm').classList.remove('hidden');
+};
+
+document.getElementById('createSchoolBtn').onclick = function() {
+    const schoolName = document.getElementById('schoolName').value;
+    const schoolEmail = document.getElementById('schoolEmail').value;
+    const schoolCode = document.getElementById('schoolCode').value;
+
+    if (schoolName && schoolEmail && schoolCode) {
+        schoolData = { name: schoolName, email: schoolEmail, code: schoolCode, teachers: [], students: {}, feedback: [] };
+        alert("School created successfully!");
+
+        document.getElementById('principalForm').classList.add('hidden');
+        document.getElementById('addTeachers').classList.remove('hidden');
+    } else {
+        document.getElementById('schoolError').innerText = "Please fill in all fields.";
+    }
+};
+
+document.getElementById('addTeachersBtn').onclick = function() {
+    const numTeachers = document.getElementById('numTeachers').value;
+    const teachersInputDiv = document.getElementById('teachersInput');
+    teachersInputDiv.innerHTML = '';
+
+    for (let i = 0; i < numTeachers; i++) {
+        teachersInputDiv.innerHTML += `
+            <input type="text" placeholder="Teacher Name" class="teacherName" required>
+            <input type="text" placeholder="Qualification" class="teacherQualification" required>
+        `;
+    }
+    teachersInputDiv.innerHTML += '<button id="saveTeachersBtn">Save Teachers</button>';
+    teachersInputDiv.classList.remove('hidden');
+
+    document.getElementById('saveTeachersBtn').onclick = function() {
+        const teacherNames = document.getElementsByClassName('teacherName');
+        const teacherQualifications = document.getElementsByClassName('teacherQualification');
+
+        for (let i = 0; i < teacherNames.length; i++) {
+            if (teacherNames[i].value && teacherQualifications[i].value) {
+                schoolData.teachers.push({
+                    name: teacherNames[i].value,
+                    qualification: teacherQualifications[i].value,
+                    ratings: { safe: [], manners: [] }
+                });
+            }
+        }
+
+        teachersInputDiv.classList.add('hidden');
+        alert("Teachers added successfully!");
+        document.getElementById('addStudents').classList.remove('hidden');
+    };
+};
+
+document.getElementById('addStudentsBtn').onclick = function() {
+    const numStudents = document.getElementById('numStudents').value;
+    const studentsInputDiv = document.getElementById('studentsInput');
+    studentsInputDiv.innerHTML = '';
+
+    for (let i = 0; i < numStudents; i++) {
+        studentsInputDiv.innerHTML += `
+            <input type="text" placeholder="Roll Number" class="studentRoll" required>
+            <input type="password" placeholder="Password" class="studentPassword" required>
+        `;
+    }
+    studentsInputDiv.innerHTML += '<button id="saveStudentsBtn">Save Students</button>';
+    studentsInputDiv.classList.remove('hidden');
+
+    document.getElementById('saveStudentsBtn').onclick = function() {
+        const studentRolls = document.getElementsByClassName('studentRoll');
+        const studentPasswords = document.getElementsByClassName('studentPassword');
+
+        for (let i = 0; i < studentRolls.length; i++) {
+            if (studentRolls[i].value && studentPasswords[i].value) {
+                schoolData.students[studentRolls[i].value] = studentPasswords[i].value;
+            }
+        }
+
+        studentsInputDiv.classList.add('hidden');
+        alert("All details saved. Students can now log in.");
+        resetToHomeScreen();
+    };
+};
+
+function resetToHomeScreen() {
+    document.getElementById('addTeachers').classList.add('hidden');
+    document.getElementById('addStudents').classList.add('hidden');
+    document.getElementById('loginOptions').classList.remove('hidden');
+    document.getElementById('teachersInput').innerHTML = '';
+    document.getElementById('studentsInput').innerHTML = '';
+}
+
+document.getElementById('loginStudentSubmit').onclick = function() {
+    const studentSchoolCode = document.getElementById('studentSchoolCode').value;
+    const studentRollNumber = document.getElementById('studentRollNumber').value;
+    const studentPassword = document.getElementById('studentPassword').value;
+
+    if (studentSchoolCode === schoolData.code && schoolData.students[studentRollNumber] === studentPassword) {
+        document.getElementById('studentForm').classList.add('hidden');
+        document.getElementById('teacherSelection').classList.remove('hidden');
+
+        const teacherList = document.getElementById('teacherList');
+        teacherList.innerHTML = '';
+
+        schoolData.teachers.forEach((teacher, index) => {
+            const option = document.createElement('option');
+            option.value = index;
+            option.textContent = teacher.name;
+            teacherList.appendChild(option);
+        });
+    } else {
+        document.getElementById('studentError').innerText = "Invalid credentials or school code.";
+    }
+};
+
+// Teacher rating
+document.getElementById('rateTeacherBtn').onclick = function() {
+    const selectedTeacherIndex = document.getElementById('teacherList').value;
+    const selectedTeacher = schoolData.teachers[selectedTeacherIndex];
+
+    const ratingQuestions = document.getElementById('ratingQuestions');
+    ratingQuestions.innerHTML = `
+        <div class="rating-question">
+            <label>1. Do you feel safe with ${selectedTeacher.name}? (0-100%)</label>
+            <input type="number" id="feelSafe" min="0" max="100" required>
+        </div>
+        <div class="rating-question">
+            <label>2. Is he/she good in manners? (0-100%)</label>
+            <input type="number" id="goodManners" min="0" max="100" required>
+        </div>
+    `;
+    ratingQuestions.classList.remove('hidden');
+    document.getElementById('submitRatingBtn').classList.remove('hidden');
+};
+
+document.getElementById('submitRatingBtn').onclick = function() {
+    const selectedTeacherIndex = document.getElementById('teacherList').value;
+    const feelSafe = document.getElementById('feelSafe').value;
+    const goodManners = document.getElementById('goodManners').value;
+
+    if (feelSafe && goodManners) {
+        schoolData.teachers[selectedTeacherIndex].ratings.safe.push(parseInt(feelSafe));
+        schoolData.teachers[selectedTeacherIndex].ratings.manners.push(parseInt(goodManners));
+
+        const feedback = {
+            teacher: schoolData.teachers[selectedTeacherIndex].name,
+            safe: parseInt(feelSafe),
+            manners: parseInt(goodManners)
+        };
+        schoolData.feedback.push(feedback);
+
+        alert("Ratings submitted!");
+        showResults(selectedTeacherIndex);
+    } else {
+        alert("Please provide ratings for both questions.");
+    }
+};
+
+function showResults(teacherIndex) {
+    const safeRatings = schoolData.teachers[teacherIndex].ratings.safe;
+    const mannersRatings = schoolData.teachers[teacherIndex].ratings.manners;
+
+    const safeAverage = safeRatings.length ? (safeRatings.reduce((a, b) => a + b) / safeRatings.length).toFixed(2) : 0;
+    const mannersAverage = mannersRatings.length ? (mannersRatings.reduce((a, b) => a + b) / mannersRatings.length).toFixed(2) : 0;
+
+    document.getElementById('ratingQuestions').classList.add('hidden');
+    document.getElementById('results').classList.remove('hidden');
+
+    const ctx = document.getElementById('resultsChart').getContext('2d');
+
+    if (window.resultsChart instanceof Chart) {
+        window.resultsChart.destroy();
+    }
+
+    window.resultsChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Feel Safe', 'Good Manners'],
+            datasets: [{
+                label: 'Average Ratings',
+                data: [safeAverage, mannersAverage],
+                backgroundColor: ['#FF6384', '#36A2EB'],
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    title: {
+                        display: true,
+                        text: 'Rating (%)'
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Back to home from results
+document.getElementById('backToHomeFromResults').onclick = function() {
+    resetToHomeScreen();
+    document.getElementById('results').classList.add('hidden');
+};
+
+// Institution feedback view
+document.getElementById('loginInstitutionSubmit').onclick = function() {
+    const institutionCode = document.getElementById('institutionCode').value;
+
+    if (institutionCode === schoolData.code) {
+        document.getElementById('institutionForm').classList.add('hidden');
+        document.getElementById('feedbackSection').classList.remove('hidden');
+        displayFeedback();
+    } else {
+        document.getElementById('institutionError').innerText = "Invalid institution code.";
+    }
+};
+
+function displayFeedback() {
+    const feedbackList = document.getElementById('feedbackList');
+    feedbackList.innerHTML = '';
+
+    if (schoolData.feedback.length === 0) {
+        feedbackList.innerHTML = '<p>No feedback available.</p>';
+        return;
+    }
+
+    schoolData.feedback.forEach(item => {
+        feedbackList.innerHTML += `<p>Teacher: ${item.teacher}, Feel Safe: ${item.safe}, Good Manners: ${item.manners}</p>`;
+    });
+}
+
+// Back to home
+document.getElementById('backToHome').onclick = function() {
+    resetToHomeScreen();
+    document.getElementById('feedbackSection').classList.add('hidden');
+};
+
+// Initialization
+let web3;
+let contract;
+
+async function initWeb3() {
+    if (window.ethereum) {
+        web3 = new Web3(window.ethereum);
+        await window.ethereum.request({ method: 'eth_requestAccounts' });
+    } else {
+        alert('Please install MetaMask!');
+    }
+}
+
+window.onload = async () => {
+    await initWeb3();
+};
+</script>
+
+</body>
+</html>
